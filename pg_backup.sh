@@ -26,7 +26,7 @@ log() {
     local level=$1
     shift 
     local message="$*"
-    echo "[$(date "+%Y-%m-%d %H:%M:%S')] [$level] $message" | tee -a "$LOG_FILE"  
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$level] $message" | tee -a "$LOG_FILE"  
 }
 
 log_info() {
@@ -109,7 +109,7 @@ check_diskspace() {
         
         if [[ -n "$db_name" && -n "$size_bytes" ]]; then
             total_size=$((total_size + size_bytes))
-            log_info "  📊 $db_name: $size_pretty"
+            log_info "$db_name: $size_pretty"
         fi
     done <<< "$db_info"
     
