@@ -126,7 +126,7 @@ check_diskspace() {
     
     if [[ $available_space -lt $required_space ]]; then
         log_error "Недостаточно места! Нужно: ${required_mb} MB, доступно: ${available_mb} MB"
-        return 1
+        exit 1
     fi
     
     log_success "Проверка места пройдена успешно"
@@ -196,12 +196,12 @@ main() {
 #проверка валидности архива
 
     log_info "Проверка целостности архива ${TEMP_DIR}/${BACKUP_NAME}"
-        if gzip -t "${TEMP_DIR}/${BACKUP_NAME}" 2>>"$LOG_FILE"; then
-            log_success "Архив прошел проверку целостности!"
-        else
-            log_error "Архив НЕ прошёл проверку целостности!"
-            exit 1
-        fi    
+    if gzip -t "${TEMP_DIR}/${BACKUP_NAME}" 2>>"$LOG_FILE"; then
+        log_success "Архив прошел проверку целостности!"
+    else
+        log_error "Архив НЕ прошёл проверку целостности!"
+        exit 1
+    fi    
 
 #перемещение архива в целевую директорию
 
