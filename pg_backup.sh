@@ -25,7 +25,7 @@ PG_USER="postgres"
 log() {
     local level=$1
     shift 
-    local message=$*
+    local message="$*"
     echo "[$(date "+%Y-%m-%d %H:%M:%S')] [$level] $message" | tee -a "$LOG_FILE"  
 }
 
