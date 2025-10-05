@@ -1,0 +1,65 @@
+name: Bash Script Linting
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          check_together: 'true'
+          severity: error
+
+  validate-syntax:
+    name: Validate Bash Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate syntax
+        run: |
+          echo "🔍 Проверка синтаксиса bash скрипта"
+          bash -n pg_backup.sh
+          echo "Синтаксис корректен"
+
+  code-formatting:
+    name: Check Code Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check formatting with shfmt
+        run: |
+          echo "Проверка форматирования кода"
+          docker run --rm -v "$PWD:/mnt" -w /mnt mvdan/shfmt -i 2 -ci -l pg_backup.sh
+          echo "Проверка форматирования завершена"
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Basic security checks
+        run: |
+          echo "Базовая проверка безопасности"
+          
+          # Проверяем на наличие hardcoded паролей
+          if grep -E "password.*=.*['\\\"].*" pg_backup.sh; then
+            echo "Возможны хардкоженные пароли!"
+            exit 1
+          fi                       
+          echo "Базовая проверка безопасности пройдена"
