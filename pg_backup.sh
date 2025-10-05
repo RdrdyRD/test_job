@@ -85,17 +85,52 @@ check_dependencies() {
 }
 
 check_diskspace() {
-    log_info "Проверка наличия необходимого свободного места в $BACKUP_DIR !"
-    local dir_space
-    dir_space=$(df "$BACKUP_DIR" | awk "NR==2 {print \$4}")
+    log_info "Детальная проверка места для бэкапа..."
     
-    #1 гигабайт минимум
-    if [[ $dir_space -lt 1048576 ]]; then
-        log_error "В $BACKUP_DIR не хватает свободного места! Сейчас там $dir_space KB"
-        exit 1
+    local db_info
+    db_info=$(psql -U postgres -d postgres -t -c "
+        SELECT 
+            datname,
+            pg_size_pretty(pg_database_size(datname)) as size_pretty,
+            pg_database_size(datname) as size_bytes
+        FROM pg_database 
+        WHERE datistemplate = false 
+        AND datname NOT IN ('postgres')
+        ORDER BY size_bytes DESC
+    ")
+    
+    local total_size=0
+    local safety_buffer=1.3  # 30% запас
+    
+    echo "Размеры баз данных:"
+    while IFS='|' read -r db_name size_pretty size_bytes; do
+        db_name=$(echo "$db_name" | xargs)
+        size_pretty=$(echo "$size_pretty" | xargs)
+        
+        if [[ -n "$db_name" && -n "$size_bytes" ]]; then
+            total_size=$((total_size + size_bytes))
+            log_info "  📊 $db_name: $size_pretty"
+        fi
+    done <<< "$db_info"
+    
+    local required_space=$((total_size * safety_buffer))
+    local available_space=$(df "$BACKUP_DIR" | awk "NR==2 {print \$4 * 1024}")  # в байтах
+    
+    local total_mb=$((total_size / 1024 / 1024))
+    local required_mb=$((required_space / 1024 / 1024)) 
+    local available_mb=$((available_space / 1024 / 1024))
+    
+    log_info "Общий размер БД: ${total_mb} MB"
+    log_info "Требуется с запасом 30%: ${required_mb} MB"
+    log_info "Доступно в $BACKUP_DIR: ${available_mb} MB"
+    
+    if [[ $available_space -lt $required_space ]]; then
+        log_error "Недостаточно места! Нужно: ${required_mb} MB, доступно: ${available_mb} MB"
+        return 1
     fi
     
-    log_success "В $BACKUP_DIR достаточно свободного места: $dir_space KB!"
+    log_success "Проверка места пройдена успешно"
+    return 0
 }
 
 #основная логика бэкапа
